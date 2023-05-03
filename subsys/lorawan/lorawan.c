@@ -369,6 +369,25 @@ int lorawan_join(const struct lorawan_join_config *join_cfg, bool skipjoin)
 	LoRaMacStatus_t status;
 	int ret = 0;
 
+	if (skipjoin) {
+		/* We need to confirm that the JoinNonce is not zero
+		*/
+	        MibRequestConfirm_t mib_req;
+        	LOG_DBG("Retrieving LoRaWAN context to check JoinNonce");
+	        /* Retrieve the actual context */
+	        mib_req.Type = MIB_NVM_CTXS;
+        	if (LoRaMacMibGetRequestConfirm(&mib_req) != LORAMAC_STATUS_OK) {
+                	LOG_ERR("Could not get NVM context");
+                	return -EINVAL;
+        	}
+	        LOG_DBG("JoinNonce: %"PRIu32,
+	                mib_req.Param.Contexts->Crypto.JoinNonce);
+		if (mib_req.Param.Contexts->Crypto.JoinNonce == 0){
+			LOG_DBG("First join! Overriding skipjoin parameter");
+			skipjoin = false;
+		}
+	}
+
 	k_mutex_lock(&lorawan_join_mutex, K_FOREVER);
 
 	/* MIB_PUBLIC_NETWORK powers on the radio and does not turn it off */
