@@ -205,11 +205,14 @@ void lorawan_register_dr_changed_callback(void (*dr_cb)(enum lorawan_datarate));
  *
  * Join the LoRaWAN network using OTAA or AWB.
  *
- * @param config Configuration to be used
+ * @param config       Configuration to be used
+ *
+ * @param skipjoin     Boolean flag to skip sending join request if radio context
+ *                     is restored from NVM.
  *
  * @return 0 if successful, negative errno code if failure
  */
-int lorawan_join(const struct lorawan_join_config *config);
+int lorawan_join(const struct lorawan_join_config *config, bool skipjoin);
 
 /**
  * @brief Start the LoRaWAN stack

@@ -205,7 +205,7 @@ static void mlme_indication_handler(MlmeIndication_t *mlme_indication)
 }
 
 static LoRaMacStatus_t lorawan_join_otaa(
-	const struct lorawan_join_config *join_cfg)
+	const struct lorawan_join_config *join_cfg, bool skipjoin)
 {
 	MlmeReq_t mlme_req;
 	MibRequestConfirm_t mib_req;
@@ -241,6 +241,10 @@ static LoRaMacStatus_t lorawan_join_otaa(
 	mib_req.Type = MIB_APP_KEY;
 	mib_req.Param.AppKey = join_cfg->otaa.app_key;
 	LoRaMacMibSetRequestConfirm(&mib_req);
+
+	if (!IS_ENABLED(CONFIG_LORAWAN_NVM_NONE) & skipjoin) {
+		return LORAMAC_STATUS_OK;
+	}
 
 	return LoRaMacMlmeRequest(&mlme_req);
 }
@@ -359,7 +363,7 @@ int lorawan_set_region(enum lorawan_region region)
 	return 0;
 }
 
-int lorawan_join(const struct lorawan_join_config *join_cfg)
+int lorawan_join(const struct lorawan_join_config *join_cfg, bool skipjoin)
 {
 	MibRequestConfirm_t mib_req;
 	LoRaMacStatus_t status;
@@ -373,14 +377,17 @@ int lorawan_join(const struct lorawan_join_config *join_cfg)
 	LoRaMacMibSetRequestConfirm(&mib_req);
 
 	if (join_cfg->mode == LORAWAN_ACT_OTAA) {
-		status = lorawan_join_otaa(join_cfg);
+		status = lorawan_join_otaa(join_cfg, skipjoin);
 		if (status != LORAMAC_STATUS_OK) {
 			LOG_ERR("OTAA join failed: %s",
 				lorawan_status2str(status));
 			ret = lorawan_status2errno(status);
 			goto out;
 		}
-
+		if (skipjoin) {
+			LOG_DBG("Skipped join request!");
+			goto out;
+		}
 		LOG_DBG("Network join request sent!");
 
 		/*
